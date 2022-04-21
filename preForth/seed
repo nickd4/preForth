@@ -1,6 +1,7 @@
 #!/bin/bash
 
 stty raw -echo
-cat seedForthInteractive.seed hi.forth - | ./seedForth
+cat seedForthInteractive.seed hi.forth - |LD_LIBRARY_PATH=lib ./z80 seedForth.bin
+echo "exitcode $?"
 stty sane
 

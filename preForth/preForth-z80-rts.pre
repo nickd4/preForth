@@ -1,0 +1,205 @@
+\ preForth runtime system - z80 dependent part
+\ --------------------------
+\
+\  - registers:
+\      HL, DE  general purpose
+\      BC  instruction pointer
+\      IX  return stack pointer
+\      SP  data stack pointer
+
+pre
+; This is a preForth generated file using preForth-z80-backend.
+; Only modify it, if you know what you are doing.
+
+; I/O ports for communication with unix host
+STDIN_PORT = 0
+STDOUT_PORT = 1
+STDERR_PORT = 2
+SYSTEM_PORT = 3
+
+; readable status bits
+SYSTEM_STDIN_EOF = 1
+SYSTEM_STDIN_READY = 2
+SYSTEM_STDOUT_READY = 4
+SYSTEM_STDERR_READY = 8
+
+; writeable command bits
+SYSTEM_EXITCODE = 0x3f
+SYSTEM_EXIT = 0x40
+SYSTEM_YIELD = 0x80
+
+DATA_STACK_SIZE = 0x1000
+RETURN_STACK_SIZE = 0x1000
+
+	.area	text
+
+main:	ld	ix,return_stack + RETURN_STACK_SIZE
+	ld	sp,data_stack + DATA_STACK_SIZE
+	ld	bc,main1
+	jp	next
+
+main1:	.dw	_cold
+	.dw	_bye
+
+	.area	bss
+
+return_stack:
+	.ds	RETURN_STACK_SIZE
+data_stack:
+	.ds	DATA_STACK_SIZE
+
+	.area	text
+;
+
+code bye ( -- )
+	ld	a,SYSTEM_EXIT
+	out	(SYSTEM_PORT),a
+;
+
+pre
+
+emit_loop:
+	ld	a,SYSTEM_YIELD
+	out	(SYSTEM_PORT),a
+;
+
+code emit ( c -- )
+	in	a,(SYSTEM_PORT)
+	and	SYSTEM_STDOUT_READY
+	jr	z,emit_loop
+	pop	hl
+	ld	a,l
+	out	(STDOUT_PORT),a
+	jr	next
+;
+
+pre
+
+key_loop:
+	ld	a,SYSTEM_YIELD
+	out	(SYSTEM_PORT),a
+;
+
+code key ( -- c )
+	in	a,(SYSTEM_PORT)
+
+	; test SYSTEM_STDIN_EOF bit
+	rra
+	ld	l,4 ; eot
+	jr	c,key_done
+
+        ; test SYSTEM_STDIN_READY bit
+	rra
+	jr	nc,key_loop
+
+	in	a,(STDIN_PORT)
+	ld	l,a
+key_done:
+	ld	h,0
+	push	hl
+	jr	next
+;
+
+code dup ( x -- x x )
+	pop	hl
+	push	hl
+	push	hl
+	jr	next
+;
+
+code swap ( x y -- y x )
+	pop	de
+	pop	hl
+	push	de
+	push	hl
+	jr	next
+;
+
+code drop ( x -- )
+	pop	hl
+	jr	next
+;
+
+code 0< ( x -- flag )
+	pop	hl
+	add	hl,hl
+	ld	hl, 0
+	jr	nc,zless1
+	dec	hl
+zless1: push	hl
+	jr	next
+;
+
+code ?exit ( f -- )
+	pop	hl
+	ld	a,l
+	or	h
+	jr	z,next
+	ld	c,(ix)
+	inc	ix
+	ld	b,(ix)
+	inc	ix
+	jr	next
+;
+
+code >r ( x -- ) ( R -- x )
+	pop	hl
+	dec	ix
+	ld	(ix),h
+	dec	ix
+	ld	(ix),l
+	jr	next
+;
+
+code r> ( R x -- ) ( -- x )
+	ld	l,(ix)
+	inc	ix
+	ld	h,(ix)
+	inc	ix
+	push	hl
+	jr	next
+;
+
+code - ( x1 x2 -- x3 )
+	pop	de
+	pop	hl
+	or	a
+	sbc	hl,de
+	push	hl
+	jr	next
+;
+
+\ put this in middle of the primitives to make it reachable by jr
+pre
+nest:	dec	ix
+	ld	(ix),b
+	dec	ix
+	ld	(ix),c
+	pop	bc
+next:	ld	a,(bc)
+	ld	l,a
+	inc	bc
+	ld	a,(bc)
+	ld	h,a
+	inc	bc
+	jp	(hl)
+;
+
+code unnest ( -- )
+	ld	c,(ix)
+	inc	ix
+	ld	b,(ix)
+	inc	ix
+	jr	next
+;
+
+code lit ( -- )
+	ld	a,(bc)
+	ld	l,a
+	inc	bc
+	ld	a,(bc)
+	ld	h,a
+	inc	bc
+	push	hl
+	jr	next
+;
