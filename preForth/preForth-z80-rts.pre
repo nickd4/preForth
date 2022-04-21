@@ -135,6 +135,10 @@ code ?exit ( f -- )
 	ld	a,l
 	or	h
 	jr	z,next
+	; fall into _exit
+;
+
+code exit ( -- )
 	ld	c,(ix)
 	inc	ix
 	ld	b,(ix)
@@ -170,8 +174,8 @@ code - ( x1 x2 -- x3 )
 ;
 
 \ put this in middle of the primitives to make it reachable by jr
-pre
-nest:	dec	ix
+code enter ( -- )
+	dec	ix
 	ld	(ix),b
 	dec	ix
 	ld	(ix),c
@@ -183,14 +187,6 @@ next:	ld	a,(bc)
 	ld	h,a
 	inc	bc
 	jp	(hl)
-;
-
-code unnest ( -- )
-	ld	c,(ix)
-	inc	ix
-	ld	b,(ix)
-	inc	ix
-	jr	next
 ;
 
 code lit ( -- )

@@ -51,11 +51,11 @@ data_stack:
 
 	; dictionary pointer: points to next free location in memory
 	; free memory starts at _start
-_dp:    .dw	_start
+_dp:	.dw	_start
 
 	; head pointer: index of first unused head
 __hp:	.dw	0
-_head:  .ds	HEAD_SIZE ; note: must be initialized to 0
+_head:	.ds	HEAD_SIZE ; note: must be initialized to 0
 
 _start:
 
@@ -101,7 +101,7 @@ code key ( -- c )
 	ld	l,4 ; eot
 	jr	c,key_done
 
-        ; test SYSTEM_STDIN_READY bit
+	; test SYSTEM_STDIN_READY bit
 	rra
 	jr	nc,key_loop
 
@@ -160,6 +160,10 @@ code ?exit ( f -- )
 	ld	a,l
 	or	h
 	jr	z,next
+	; fall into _exit
+;
+
+code exit ( -- )
 	ld	c,(ix)
 	inc	ix
 	ld	b,(ix)
@@ -195,13 +199,21 @@ code - ( x1 x2 -- x3 )
 ;
 
 \ put this in middle of the primitives to make it reachable by jr
-code enter ( -- )
-
-nest:	dec	ix
+\ note: we arrive at _dodoes by a sequence of 2 calls, the return
+\ address stacked by first call points to some instance data, and
+\ the return address stacked by second call (to _dodoes) points to
+\ high level forth code which is going to operate on that instance
+\ data -- we simply leave the instance data's address stacked for
+\ the high level forth code and then "execute" the high level forth
+\ code, which means that _dodoes is the same as _enter in our case
+\ note: similarly, arriving at _dovar we just leave address stacked
+code dodoes ( -- )
+_enter: dec	ix
 	ld	(ix),b
 	dec	ix
 	ld	(ix),c
 	pop	bc
+_dovar:
 next:	ld	a,(bc)
 	ld	l,a
 	inc	bc
@@ -209,25 +221,6 @@ next:	ld	a,(bc)
 	ld	h,a
 	inc	bc
 	jp	(hl)
-;
-
-code dodoes ( -- addr )
-	dec	ix
-	ld	(ix),b
-	dec	ix
-	ld	(ix),c
-	;mov esi,[eax-4]   ; set IP
-	; fall into dovar
- ld a,SYSTEM_EXIT | 1
- out (SYSTEM_PORT),a
-;
-
-code dovar ( -- addr )
-	;lea eax,[eax+4] ; to parameter field
-	;push eax
- ld a,SYSTEM_EXIT | 2
- out (SYSTEM_PORT),a
-	jr	next
 ;
 
 code or ( x1 x2 -- x3 )
@@ -244,7 +237,7 @@ code or ( x1 x2 -- x3 )
 ;
 
 code and ( x1 x2 -- x3 )
-       	pop	de
+	pop	de
 	pop	hl
 	ld	a,l
 	and	e
@@ -253,14 +246,6 @@ code and ( x1 x2 -- x3 )
 	and	d
 	ld	h,a
 	push	hl
-	jr	next
-;
-
-code unnest ( -- )
-_exit:	ld	c,(ix)
-	inc	ix
-	ld	b,(ix)
-	inc	ix
 	jr	next
 ;
 
@@ -289,7 +274,7 @@ code c@ ( c-addr -- c )
 	ld	e,(hl)
 	ld	d,0
 	push	de
-        jr	next
+	jr	next
 ;
 
 code ! ( x addr -- )
@@ -334,7 +319,7 @@ code ?branch ( f -- ) \ threaded code:  ?exit r> @ >r ;
 	pop	hl
 	ld	a,l
 	or	h
-        jr	z,_branch
+	jr	z,_branch
 	inc	bc
 	inc	bc
 	jr	next
@@ -344,12 +329,8 @@ code depth ( -- n )
 	ld	hl,data_stack + DATA_STACK_SIZE
 	or	a
 	sbc	hl,sp ; should leave cf = 0
-	ld	a,h
-	rra
-	ld	h,a
-	ld	a,l
-	rra
-	ld	l,a
+	rr	h
+	rr	l
 	push	hl
 	jr	next1
 ;
@@ -358,13 +339,13 @@ code sp@ ( -- x )
 	ld	hl,0
 	add	hl,sp
 	push	hl
-        jr	next1
+	jr	next1
 ;
 
 code sp! ( x -- )
 	pop	hl
 	ld	sp,hl
-        jr	next1
+	jr	next1
 ;
 
 code rp@ ( -- x )
@@ -431,7 +412,7 @@ udiv_skip:
 	push	de ; push u2 (remainder)
 	push	hl ; push u1 (quotient)
 	
-        exx
+	exx
 	jr	next1
 ;
 
@@ -465,7 +446,7 @@ next1:	ld	a,(bc)
    dup + ;
 
 : cells ( x1 -- x2 )
-   2* 2* ;
+   2* ; \ 2* 2* ;
 
 : +! ( x addr -- )
    swap >r  dup @ r> +  swap ! ;
@@ -513,16 +494,23 @@ next1:	ld	a,(bc)
    tail interpreter ;
 
 : ?lit ( xt -- xt | )  
-   dup h@ lit num - ?exit drop   \ not num token: exit i.e. normal compile action
-   lit lit ,   num ,             \ generate  lit x   num call puts x on stack
+   dup h@ lit num - ?exit \ not num token: exit i.e. normal compile action
+   drop  lit lit ,   num , \ generate  lit x   num call puts x on stack
+   r> drop   tail compiler ;
+
+\ for z80 dtc implementation, insert "call _dodoes" after each "does>" token
+: ?does> ( xt -- xt | )
+   dup h@ lit does> - ?exit \ not does> token: exit i.e. normal compile action
+   h@ ,  205 c, lit dodoes , \ generate word of does> and instruction of call
    r> drop   tail compiler ;
 
 : compiler ( -- )
-   token ?dup 0= ?exit  ?lit 
+   token ?dup 0= ?exit  ?lit  ?does>
    compile, tail compiler ;
 
+\ for z80 dtc implementation, compile "call _enter" before high level code
 : new ( -- xt )
-   hp @   here h,  lit enter , ;
+   hp @  here h,  205 c, lit enter , ;
 
 : fun ( -- )
    new drop  compiler ;
@@ -533,19 +521,23 @@ next1:	ld	a,(bc)
 : $lit ( -- addr u )
     r>  dup   1 +   dup >r  swap c@  dup r> + >r ;
 
+\ for z80 dtc implementation, compile "call _dovar" before data field of new
+\ word, the "_dovar" will be changed the address of "call _dodoes" if needed
 : create ( -- xt )
-   0 , \ dummy does> field
-   hp @  here h, lit dovar , ;
+    hp @  here h,  205 c, lit dovar , ;
 
-: does> ( xt -- ) \ set code field of last defined word
-    r>   swap h@  dup >r 1 cells - !   lit dodoes r> !
-;
+\ for does> we do not execute the remainder of the routine, instead we pop
+\ the return stack and plug the resulting number into the word being compiled,
+\ so that this word will execute the remainder of the routine when invoked
+\ (and note remainder of the routine has been prefixed with a "call _dodoes")
+: does> ( xt -- ) \ replace "_dovar" in "call _dovar" with return stack addr
+    r>  swap h@  1 + ! ;
 
 : unused ( -- u )  
     lit memtop  here - ;
 
 : cold ( -- )
-   \ 's' emit 'e' dup emit emit  'd' emit 10 emit
+   's' emit 'e' dup emit emit  'd' emit 10 emit
    lit bye         h, \ 0   00  code
    0               h, \ 1   01  prefix
    0               h, \ 2   02  prefix
