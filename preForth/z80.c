@@ -192,6 +192,7 @@ void ioWrite(int param, ushort address, byte data) {
   case STDOUT_PORT:
     stdio_service(1, STDIO_BUFFER_SIZE);
     stdio_buffer_write(&stdout_buffer, data);
+ stdio_service(1, 1);
     break;
   case STDERR_PORT:
     stdio_service(1, STDIO_BUFFER_SIZE);
