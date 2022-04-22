@@ -361,8 +361,9 @@ end-tests
 Definer Defer ( <name> -- ) 
    create >r [ ' uninitialized ] Literal , r> does> @ execute ;
 
+\ for z80 dtc implementation, we must index past the "call" instruction
 : >body ( xt -- body )  
-    h@  1 cells + ;
+    h@  1 + 1 cells + ;
 
 : is ( xt -- )  \ only interactive
     ' >body ! ;
@@ -1142,10 +1143,9 @@ Defer .status   : noop ;  ' noop is .status
      .status  prompt query  0 >in !  interpret  ?stack .ok
    0 UNTIL ;
 
-: warm ( -- )
-   \ [ ' [ compile, ] 
-   empty-stack restart ;
-
+\ : warm ( -- )
+\    \ [ ' [ compile, ] 
+\    empty-stack restart ;
 
 2 Constant major ( -- x )
 2 Constant minor ( -- x )
@@ -1183,7 +1183,9 @@ Create errormsg  0 , 0 ,
    key drop \ skip 0 of boot program
    .banner
    BEGIN
-      [ ' warm ] Literal catch ?dup IF  .error  cr THEN
+      \ bypass the "warm" word which empties stack, as throw does this anyway
+      \ [ ' warm ] Literal catch ?dup IF  .error  cr THEN
+      [ ' restart ] Literal catch ?dup IF  .error  cr THEN
    AGAIN ;
 
 ' boot has-header boot
