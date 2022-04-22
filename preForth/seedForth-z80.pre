@@ -89,11 +89,17 @@ code emit ( c -- )
 pre
 
 key_loop:
+ ;ld a,0x2e
+ ;call print_char
 	ld	a,SYSTEM_YIELD
 	out	(SYSTEM_PORT),a
+ ;jr silly
 ;
 
 code key ( -- c )
+ ;ld a,0x4b
+ ;call print_char
+;silly:
 	in	a,(SYSTEM_PORT)
 
 	; test SYSTEM_STDIN_EOF bit
@@ -110,6 +116,9 @@ code key ( -- c )
 key_done:
 	ld	h,0
 	push	hl
+ ;ld a,0x3d
+ ;call print_char
+ ;call print_hexw
 	jr	next
 ;
 
@@ -332,7 +341,7 @@ code depth ( -- n )
 	rr	h
 	rr	l
 	push	hl
-	jp next1 ;jr	next1
+	jr	next1
 ;
 
 code sp@ ( -- x )
@@ -363,21 +372,43 @@ code um* ( u1 u2 -- ud )
 
 	pop	de ; pop u2
 	pop	bc ; pop u1
+ ;ld l,c
+ ;ld h,b
+ ;call print_hexw
+ ;ld a,0x2a
+ ;call print_char
+ ;ld l,e
+ ;ld h,d
+ ;call print_hexw
 
-	ld	hl,0
+	sub	a ; clears cf
+	ld	l,a
+	ld	h,a
 	ld	a,b
 	ld	b,16
 	or	a
 umul_loop:
-	rr	h
-	rr	l
 	rra
 	rr	c
 	jr	nc,umul_skip
 	add	hl,de ; can't overflow, leaves cf = 0
 umul_skip:
+	rr	h
+	rr	l
 	djnz	umul_loop
+	rra
+	rr	c
 	ld	b,a
+ ;ld a,0x3d
+ ;call print_char
+ ;push hl
+ ;call print_hexw
+ ;ld l,c
+ ;ld h,b
+ ;call print_hexw
+ ;pop hl
+ ;ld a,0xa
+ ;call print_char
 
 	push	bc ; push ud lo
 	push	hl ; push ud hi
@@ -392,17 +423,17 @@ code um/mod ( ud u1 -- u2 u3 )
 	pop	bc ; pop u1
 	pop	hl ; pop ud hi
 	pop	de ; pop ud lo
- push hl
- call print_hexw
- ld l,e
- ld h,d
- call print_hexw
- ld a,0x2f
- call print_char
- ld l,c
- ld h,b
- call print_hexw
- pop hl
+; push hl
+; call print_hexw
+; ld l,e
+; ld h,d
+; call print_hexw
+; ld a,0x2f
+; call print_char
+; ld l,c
+; ld h,b
+; call print_hexw
+; pop hl
 
 	ld	a,16
 	or	a
@@ -429,18 +460,18 @@ udiv_cont:
 	jr	nz,udiv_loop
 	ex	de,hl
 	adc	hl,hl ; record final quotient bit
- ld a,0x3d
- call print_char
- push hl
- call print_hexw
- ld a,0x72
- call print_char
- ld l,e
- ld h,d
- call print_hexw
- pop hl
- ld a,0xa
- call print_char
+; ld a,0x3d
+; call print_char
+; push hl
+; call print_hexw
+; ld a,0x72
+; call print_char
+; ld l,e
+; ld h,d
+; call print_hexw
+; pop hl
+; ld a,0xa
+; call print_char
 
 	push	de ; push u2 (remainder)
 	push	hl ; push u1 (quotient)
@@ -652,6 +683,7 @@ print_char:
    lit token       h, \ 56  38
    lit usleep      h, \ 57  39  code
    lit hp          h, \ 58  40
+   lit dodoes      h, \ 59  41
    interpreter bye ;
 
 \ pre

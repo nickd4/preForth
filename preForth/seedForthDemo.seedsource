@@ -2,7 +2,7 @@
 \
 \ tokenize with
 \
-\ gforth seedForth-tokinzer.fs seedForthDemo.seedsource
+\ gforth seedForth-tokenizer.fs seedForthDemo.seedsource
 \
 \ then pipe into seedForth:
 \

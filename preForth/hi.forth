@@ -306,7 +306,7 @@ end-tests
 begin-tests
 
 t{ 3 4 pyth -> 5 }t
-t{ 65535 dup * sqrt -> 65535 }t
+t{ 255 dup * sqrt -> 255 }t
 
 end-tests
 
@@ -588,7 +588,7 @@ only Forth also definitions
 : th.prime ( u -- )
     1 BEGIN over WHILE 1+ dup prime? IF swap 1- swap THEN REPEAT nip ; 
 
-cr cr cr .( The ) 10001 dup . .( st prime is ) th.prime . 
+cr cr cr .( The ) 1001 dup . .( st prime is ) th.prime . 
 
 
 \ cooperative multi tasker

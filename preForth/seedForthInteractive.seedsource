@@ -2,7 +2,7 @@
 \
 \ tokenize with
 \
-\ gforth seedForth-tokinzer.fs seedForthInteractive.seedsource
+\ gforth seedForth-tokenizer.fs seedForthInteractive.seedsource
 \
 \ then pipe into seedForth:
 \
@@ -489,7 +489,8 @@ init
 
 \ for the input stream a struct could be defined that generally handles terminal input, evaluate, file input and others.
 
-Create tib 80 allot
+256 Constant max-line
+Create tib max-line allot
 
 Create 'source here 0 , tib ,  \ ' source is normally  ^tib #tib is set to c-addr u for evaluate
 Constant #tib
@@ -514,7 +515,7 @@ Variable input-echo -1 input-echo !
 ;
 
 : query ( -- )
-    tib 80 accept #tib ! ;
+    tib max-line accept #tib ! ;
 
 
 
@@ -856,9 +857,11 @@ Variable heads -1 heads !
 : last-xt ( -- xt )
      last @ _xt @ ;
 
+\ for z80 dtc implementation, insert "call _dodoes" after each "does>" token
 : (Does>) ( -- )
      [ ' last-xt ] Literal compile,
-     [ ' does> ] Literal compile, ; 
+     [ ' does> ] Literal compile,
+     205 c, [ ' dodoes ] Literal compile, ; 
 
 ' (Does>) has-header Does> immediate
 ' last has-header last
