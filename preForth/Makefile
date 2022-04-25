@@ -126,7 +126,7 @@ seedForth.pre \
 # so we will concatenate the tokenizer and source into a *.fs file first
 seedForthDemo.seed: seedForth-tokenizer.fs seedForthDemo.seedsource
 	cat $^ >__temp__.fs
-	gforth __temp__.fs -e bye >$@
+	$(HOSTFORTH) __temp__.fs -e bye >$@
 	rm __temp__.fs
 
 seedForthBoot.seed: \
@@ -134,7 +134,7 @@ seedForth-tokenizer.fs \
 seedForthRuntime.seedsource \
 seedForthBoot.seedsource
 	cat $^ >__temp__.fs
-	gforth __temp__.fs -e bye >$@
+	$(HOSTFORTH) __temp__.fs -e bye >$@
 	rm __temp__.fs
 
 seedForthInteractive.seed: \
@@ -142,7 +142,7 @@ seedForth-tokenizer.fs \
 seedForthRuntime.seedsource \
 seedForthInteractive.seedsource
 	cat $^ >__temp__.fs
-	gforth __temp__.fs -e bye >$@
+	$(HOSTFORTH) __temp__.fs -e bye >$@
 	rm __temp__.fs
 
 .PHONY=clean
