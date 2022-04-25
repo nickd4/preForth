@@ -37,7 +37,7 @@ hash_table_size #hash_table * dup allot hash_table swap 0 fill
         dup >r hash_table_index >r ( name_addr name_len R: entry entry_addr )
 
         \ check for null entry
-        r@ _hash_table_xt + @ 0= IF
+        r@ _hash_table_name_len + @ 0= IF
             2drop r> r> drop false UNLOOP exit
         THEN
 
@@ -63,6 +63,8 @@ hash_table_size #hash_table * dup allot hash_table swap 0 fill
     hash_table_find
 
     \ if found, return value of _xt, otherwise 0
+    \ note: value of _xt can be 0 if caller has not filled it in yet
+    \ (e.g. occurs between a Macro call and corresponding end-macro)
     IF _hash_table_xt + @ ELSE drop 0 THEN
 ;
 
