@@ -148,7 +148,7 @@ seedForthInteractive.seedsource
 	rm __temp__.fs
 
 crc10.forth: crc10_gen.forth
-	gforth $^ -e bye >$@
+	$(HOSTFORTH) $^ -e bye >$@
 
 .PHONY=clean
 clean:
